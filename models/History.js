@@ -57,4 +57,5 @@ const HistorySchema = new mongoose.Schema({
   }
 });
 
-module.exports = mongoose.model('History', HistorySchema);
+// Export with check to prevent overwrite error
+module.exports = mongoose.models.History || mongoose.model('History', HistorySchema);
