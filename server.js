@@ -8,10 +8,26 @@ const app = express();
 // Connect to database
 connectDB();
 
-// CORS Configuration - Allow all origins for now (we'll restrict later)
+// CORS Configuration
+const allowedOrigins = [
+  'https://siap-parepare.vercel.app',
+  'http://localhost:3000'
+];
+
 app.use(cors({
-  origin: '*', // We'll change this after getting Vercel URL
-  credentials: true
+  origin: function(origin, callback) {
+    // Allow requests with no origin (mobile apps, Postman)
+    if (!origin) return callback(null, true);
+    
+    if (allowedOrigins.indexOf(origin) !== -1) {
+      return callback(null, true);
+    }
+    
+    return callback(new Error('Not allowed by CORS'));
+  },
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'x-auth-token']
 }));
 
 // Middleware
@@ -23,7 +39,7 @@ app.use('/api/files', require('./routes/files'));
 app.use('/api/history', require('./routes/history'));
 app.use('/api/users', require('./routes/users'));
 
-// Health check route
+// Health check
 app.get('/', (req, res) => {
   res.json({ 
     message: 'SIAP API is running',
@@ -48,4 +64,5 @@ const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
   console.log(`Environment: ${process.env.NODE_ENV}`);
+  console.log(`Allowed origins: ${allowedOrigins.join(', ')}`);
 });
