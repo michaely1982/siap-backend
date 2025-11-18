@@ -1,6 +1,6 @@
 const mongoose = require('mongoose');
 
-const FileSchema = new mongoose.Schema({
+const HistorySchema = new mongoose.Schema({
   fileName: {
     type: String,
     required: true
@@ -32,7 +32,7 @@ const FileSchema = new mongoose.Schema({
   },
   createdAt: {
     type: Date,
-    default: Date.now
+    required: true
   },
   updatedAt: {
     type: Date
@@ -40,7 +40,21 @@ const FileSchema = new mongoose.Schema({
   updatedBy: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'User'
+  },
+  deletedAt: {
+    type: Date,
+    default: Date.now
+  },
+  deletedBy: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User',
+    required: true
+  },
+  action: {
+    type: String,
+    enum: ['created', 'updated', 'deleted'],
+    default: 'deleted'
   }
 });
 
-module.exports = mongoose.model('File', FileSchema);
+module.exports = mongoose.model('History', HistorySchema);

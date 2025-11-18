@@ -14,7 +14,6 @@ const UserSchema = new mongoose.Schema({
   title: {
     type: String,
     required: true
-    // Removed enum restriction - now accepts any text
   },
   password: {
     type: String,
