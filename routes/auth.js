@@ -7,7 +7,7 @@ const User = require('../models/User');
 const auth = require('../middleware/auth');
 
 // @route   POST api/auth/register
-// @desc    Register user
+// @desc    Register user (pending verification)
 // @access  Public
 router.post(
   '/register',
@@ -33,13 +33,14 @@ router.post(
         return res.status(400).json({ message: 'User with this NIP already exists' });
       }
 
-      // Create user instance
+      // Create user instance (not verified by default)
       user = new User({
         nip,
         fullName,
         title,
         password,
-        role: role || 'user' // Default to 'user' if not specified
+        role: role || 'user',
+        isVerified: false  // User needs admin approval
       });
 
       // Hash password
@@ -48,33 +49,19 @@ router.post(
 
       await user.save();
 
-      // Create JWT payload
-      const payload = {
+      // Return success message (no token until verified)
+      res.json({
+        success: true,
+        message: 'Registration successful! Please wait for admin verification.',
         user: {
           id: user.id,
-          role: user.role
+          nip: user.nip,
+          fullName: user.fullName,
+          title: user.title,
+          role: user.role,
+          isVerified: user.isVerified
         }
-      };
-
-      // Sign token
-      jwt.sign(
-        payload,
-        process.env.JWT_SECRET,
-        { expiresIn: '7d' },
-        (err, token) => {
-          if (err) throw err;
-          res.json({
-            token,
-            user: {
-              id: user.id,
-              nip: user.nip,
-              fullName: user.fullName,
-              title: user.title,
-              role: user.role
-            }
-          });
-        }
-      );
+      });
     } catch (err) {
       console.error(err.message);
       res.status(500).send('Server error');
@@ -83,7 +70,7 @@ router.post(
 );
 
 // @route   POST api/auth/login
-// @desc    Login user
+// @desc    Login user (only if verified)
 // @access  Public
 router.post(
   '/login',
@@ -112,6 +99,14 @@ router.post(
         return res.status(400).json({ message: 'Invalid credentials' });
       }
 
+      // Check if user is verified
+      if (!user.isVerified) {
+        return res.status(403).json({ 
+          message: 'Your account is pending admin verification. Please wait for approval.',
+          isVerified: false
+        });
+      }
+
       // Create JWT payload
       const payload = {
         user: {
@@ -134,7 +129,8 @@ router.post(
               nip: user.nip,
               fullName: user.fullName,
               title: user.title,
-              role: user.role
+              role: user.role,
+              isVerified: user.isVerified
             }
           });
         }
@@ -152,6 +148,12 @@ router.post(
 router.get('/user', auth, async (req, res) => {
   try {
     const user = await User.findById(req.user.id).select('-password');
+    
+    // Double check verification
+    if (!user.isVerified) {
+      return res.status(403).json({ message: 'Account not verified' });
+    }
+    
     res.json(user);
   } catch (err) {
     console.error(err.message);

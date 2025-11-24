@@ -4,10 +4,13 @@ const bcrypt = require('bcryptjs');
 const User = require('../models/User');
 const adminAuth = require('../middleware/adminAuth');
 
-// Get all users (Admin only)
+// Get all users (Admin only) - including unverified
 router.get('/', adminAuth, async (req, res) => {
   try {
-    const users = await User.find().select('-password').sort({ createdAt: -1 });
+    const users = await User.find()
+      .select('-password')
+      .populate('verifiedBy', 'fullName')
+      .sort({ createdAt: -1 });
     res.json(users);
   } catch (err) {
     res.status(500).json({ message: err.message });
@@ -22,6 +25,55 @@ router.get('/:id', adminAuth, async (req, res) => {
     res.json(user);
   } catch (err) {
     res.status(500).json({ message: err.message });
+  }
+});
+
+// Verify user (Admin only)
+router.put('/:id/verify', adminAuth, async (req, res) => {
+  try {
+    const user = await User.findById(req.params.id);
+    if (!user) return res.status(404).json({ message: 'User not found' });
+
+    user.isVerified = true;
+    user.verifiedAt = new Date();
+    user.verifiedBy = req.user.id;
+
+    await user.save();
+
+    const updatedUser = await User.findById(user.id)
+      .select('-password')
+      .populate('verifiedBy', 'fullName');
+
+    res.json({ 
+      message: 'User verified successfully',
+      user: updatedUser 
+    });
+  } catch (err) {
+    res.status(400).json({ message: err.message });
+  }
+});
+
+// Unverify user (Admin only)
+router.put('/:id/unverify', adminAuth, async (req, res) => {
+  try {
+    const user = await User.findById(req.params.id);
+    if (!user) return res.status(404).json({ message: 'User not found' });
+
+    user.isVerified = false;
+    user.verifiedAt = null;
+    user.verifiedBy = null;
+
+    await user.save();
+
+    const updatedUser = await User.findById(user.id)
+      .select('-password');
+
+    res.json({ 
+      message: 'User verification revoked',
+      user: updatedUser 
+    });
+  } catch (err) {
+    res.status(400).json({ message: err.message });
   }
 });
 

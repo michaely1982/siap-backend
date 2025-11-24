@@ -24,9 +24,20 @@ const UserSchema = new mongoose.Schema({
     enum: ['admin', 'user'],
     default: 'user'
   },
+  isVerified: {
+    type: Boolean,
+    default: false  // New users are not verified by default
+  },
   createdAt: {
     type: Date,
     default: Date.now
+  },
+  verifiedAt: {
+    type: Date
+  },
+  verifiedBy: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User'
   }
 });
 
